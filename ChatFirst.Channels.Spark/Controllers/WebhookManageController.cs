@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -21,42 +22,49 @@ namespace ChatFirst.Channels.Spark.Controllers
         // POST: api/WebhookManage
         public async Task<IHttpActionResult> Post(string userToken, string botName)
         {
+            Trace.TraceInformation($"Setting webhook {userToken}:{botName}");
+
             var rq = new RestClient(uri)
             {
-                Authenticator = new OAuth2AuthorizationRequestHeaderAuthenticator("Bearer",
-                    await _channelsService.GetBearerToken(userToken, botName))
+                Authenticator = new OAuth2AuthorizationRequestHeaderAuthenticator(
+                    await _channelsService.GetBotToken(userToken, botName), "Bearer")
             };
 
-            var rc = new RestRequest("webhook", Method.POST);
+            var rc = new RestRequest("webhooks", Method.POST);
 
             var builder = new UriBuilder("https", "ch-channel-spark.azurewebsites.net", 443, $"api/webhook/{userToken}/{botName}");
+            var webhook = builder.Uri.ToString();
+            Trace.TraceInformation($"Webhook to set {webhook}");
 
             rc.AddJsonBody(
                 new
                 {
                     name = $"ChatFirst WebHook for {botName}",
-                    targetUrl = builder.Uri.ToString(),
+                    targetUrl = webhook,
                     resource = "messages",
                     @event = "created",
                     secret = $"{userToken}:{botName}" // todo hash it
                 });
 
             var result = await rq.ExecuteTaskAsync(rc);
+            
+            Trace.TraceInformation($"Answer {result.ResponseStatus}/{result.StatusCode}: {result.Content}");
 
-            if (result.StatusCode == HttpStatusCode.OK)
-            {
-                dynamic data = JObject.Parse(result.Content);
+            if (result.StatusCode != HttpStatusCode.OK)
+                return Ok(result.Content);
 
-                await _channelsService.SaveWebhookId(userToken, botName, data.id);
-            }
+            dynamic data = JObject.Parse(result.Content);
+
+            await _channelsService.SaveWebhookId(userToken, botName, data.id);
 
             return Ok(result.Content);
         }
 
 
         // DELETE: api/WebhookManage/5
-        public void Delete(int id)
+        public Task<IHttpActionResult> Delete(int id)
         {
+            throw new NotImplementedException();
         }
     }
 }

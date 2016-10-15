@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -21,7 +22,7 @@ namespace ChatFirst.Channels.Spark.Services
         public SparkClient(string bearerToken)
         {
             _bearerToken = bearerToken;
-            _client.Authenticator = new OAuth2AuthorizationRequestHeaderAuthenticator("Bearer", bearerToken);
+            _client.Authenticator = new OAuth2AuthorizationRequestHeaderAuthenticator(bearerToken, "Bearer");
         }
 
         public async Task<SparkMessage> GetMessage(string id)
@@ -51,7 +52,38 @@ namespace ChatFirst.Channels.Spark.Services
 
             return data.id;
         }
+
+        public async Task<List<User>> GetUsersInRoom(string roomId)
+        {
+            var request = new RestRequest("memberships", Method.GET);
+            request.AddQueryParameter("roomId", roomId);
+
+            var result = await _client.ExecuteTaskAsync<UserList>(request);
+            Trace.TraceInformation(result.Content);
+
+            if (result.StatusCode != HttpStatusCode.OK)
+                return new List<User>(0);
+
+            return result.Data?.Items;
+        }
+
+        private class UserList
+        {
+            public List<User> Items { get; set; }
+        }
     }
+
+public class User
+{
+    public string id { get; set; }
+    public string roomId { get; set; }
+    public string personId { get; set; }
+    public string personEmail { get; set; }
+    public string personDisplayName { get; set; }
+    public bool isModerator { get; set; }
+    public bool isMonitor { get; set; }
+    public string created { get; set; }
+}
 
 //    {
 //  "roomId" : "Y2lzY29zcGFyazovL3VzL1JPT00vYmJjZWIxYWQtNDNmMS0zYjU4LTkxNDctZjE0YmIwYzRkMTU0",

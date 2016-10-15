@@ -14,16 +14,25 @@ namespace ChatFirst.Channels.Spark.Controllers
     {
         private readonly IChannelsService _channelsService = new ChannelService();
 
+        public WebhookController()
+        {
+            
+        }
+
         public WebhookController(IChannelsService channelsService)
         {
             //_channelsService = channelsService;
         }
 
+        [Route("api/webhook/{userToken}/{botName}")]
         public async Task<IHttpActionResult> Post(string userToken, string botName, [FromBody] WebhookMessage message)
         {
             Trace.TraceInformation($"Get data from {message.id}");
 
-            ISparkClient sparkClient = new SparkClient(await _channelsService.GetBearerToken(userToken, botName));
+            if (message.data.personEmail.Contains("sparkbot.io"))
+                return Ok();
+
+            ISparkClient sparkClient = new SparkClient(await _channelsService.GetBotToken(userToken, botName));
 
             var text = await sparkClient.GetMessage(message.data.id);
             var id = await sparkClient.SendMessage(text.roomId, text.text);
