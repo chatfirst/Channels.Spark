@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace ChatFirst.Channels.Spark.Services
 {
@@ -6,6 +7,7 @@ namespace ChatFirst.Channels.Spark.Services
     {
         Task<string> GetBearerToken(string userToken, string botName);
         Task<string> GetBotToken(string userToken, string botName);
+        Task SaveWebhookId(string userToken, string botName, object id);
     }
 
     public class ChannelService : IChannelsService
@@ -17,7 +19,13 @@ namespace ChatFirst.Channels.Spark.Services
 
         public Task<string> GetBotToken(string userToken, string botName)
         {
-            return Task.FromResult("");
+            return Task.FromResult("MGM5ODI0ZDAtZmQ2OC00YzA2LWI1OTgtYjI3OTc0ZTY3YzVhZWNkZjEzNWMtNjY5");
+        }
+
+        public Task SaveWebhookId(string userToken, string botName, object id)
+        {
+            Trace.TraceInformation($"Created webhook: {userToken}:{botName}:{id}");
+            return Task.FromResult(0);
         }
     }
 }

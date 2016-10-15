@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using ChatFirst.Channels.Spark.Services;
+using Newtonsoft.Json.Linq;
 using RestSharp;
 using RestSharp.Authenticators;
 
@@ -16,19 +17,6 @@ namespace ChatFirst.Channels.Spark.Controllers
     {
         private const string uri = "https://api.ciscospark.com/v1";
         IChannelsService _channelsService = new ChannelService();
-
-
-        // GET: api/WebhookManage
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
-
-        // GET: api/WebhookManage/5
-        public string Get(int id)
-        {
-            return "value";
-        }
 
         // POST: api/WebhookManage
         public async Task<IHttpActionResult> Post(string userToken, string botName)
@@ -53,23 +41,18 @@ namespace ChatFirst.Channels.Spark.Controllers
                     secret = $"{userToken}:{botName}" // todo hash it
                 });
 
-            return Ok();
+            var result = await rq.ExecuteTaskAsync(rc);
+
+            if (result.StatusCode == HttpStatusCode.OK)
+            {
+                dynamic data = JObject.Parse(result.Content);
+
+                await _channelsService.SaveWebhookId(userToken, botName, data.id);
+            }
+
+            return Ok(result.Content);
         }
 
-        public class WebhookCreateRequest
-        {
-            public string name { get; set; }
-            public string targetUrl { get; set; }
-            public string resource { get; set; }
-            public string @event { get; set; }
-            public string filter { get; set; }
-            public string secret { get; set; }
-        }
-
-        // PUT: api/WebhookManage/5
-        public void Put(int id, [FromBody]string value)
-        {
-        }
 
         // DELETE: api/WebhookManage/5
         public void Delete(int id)
