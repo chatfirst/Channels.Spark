@@ -13,7 +13,7 @@ using RestSharp.Authenticators;
 
 namespace ChatFirst.Channels.Spark.Controllers
 {
-    [Route("webhook/manage")]
+    [Route("webhook/manage/{userToken}/{botName}")]
     public class WebhookManageController : ApiController
     {
         private const string uri = "https://api.ciscospark.com/v1";

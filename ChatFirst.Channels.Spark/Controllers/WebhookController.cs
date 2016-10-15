@@ -6,7 +6,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using ChatFirst.Channels.Spark.Models;
 using ChatFirst.Channels.Spark.Services;
+using RestSharp;
+using RestSharp.Authenticators;
 
 namespace ChatFirst.Channels.Spark.Controllers
 {
@@ -35,11 +38,50 @@ namespace ChatFirst.Channels.Spark.Controllers
             ISparkClient sparkClient = new SparkClient(await _channelsService.GetBotToken(userToken, botName));
 
             var text = await sparkClient.GetMessage(message.data.id);
-            var id = await sparkClient.SendMessage(text.roomId, text.text);
+            var nameParts = message.name.Split(' ');
+            var coreAnswer = await Talk(userToken, botName, new InputMessage()
+            {
+                InterlocutorId = $"{message.data.roomId}-{message.data.personId}",
+                FirstName = nameParts.FirstOrDefault(),
+                LastName = nameParts.LastOrDefault(),
+                Text = text.text,
+                Username = text.personEmail
+            });
+
+            foreach (var item in coreAnswer.Messages)
+            {
+                await sparkClient.SendMessage(text.roomId, item.Text);
+            }
 
             return Ok();
         }
+
+        private async Task<OutputMessage> Talk(string userToken, string botName, InputMessage message)
+        {
+            //var bt = new LogBotToken(userToken, botName, message.InterlocutorId.ToString(), "telegram");
+            var client = new RestClient("https://ch-core-mp.azurewebsites.net")
+            {
+                Authenticator = new HttpBasicAuthenticator(userToken, string.Empty)
+            };
+
+            var rq = new RestRequest("v2/talk/{botname}");
+            rq.AddUrlSegment("botname", botName);
+            rq.AddJsonBody(message);
+
+            var result = await client.ExecutePostTaskAsync<OutputMessage>(rq);
+            Trace.TraceInformation(result.Content);
+
+            result.Data.Messages = result.Data.Messages.Select(msg =>
+            {
+                msg.Text = CoreHelpers.Base64Decode(msg.Text);
+                return msg;
+            }).ToList();
+
+            return result.Data;
+        }
     }
+
+
 
     public class Data
     {

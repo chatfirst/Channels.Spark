@@ -13,7 +13,7 @@ namespace ChatFirst.Channels.Spark.Controllers
     {
         private readonly IChannelsService _channelsService = new ChannelService();
 
-        [Route("api/{userToken}/{botName}/{roomId}")]
+        [Route("api/users/{userToken}/{botName}/{roomId}")]
         public async Task<IHttpActionResult> Get(string userToken, string botName, string roomId)
         {
             var sparkClient = new SparkClient(
